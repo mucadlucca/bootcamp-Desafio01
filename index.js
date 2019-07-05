@@ -8,26 +8,35 @@ const projects = [];
 
 app.use(express.json());
 
-app.use((req, res, next) => {
+/**
+ * Midlleware that logs the number of requests
+ */
+function logRequests(req, res, next) {
   numberOfRequest++;
 
-  console.log(numberOfRequest);
+  console.log(`Número de requisições: ${numberOfRequest}`);
 
   return next();
-});
+}
 
+/**
+ * Middleware that checks if a project exists
+ */
 function projectIdExists(req, res, next) {
   const { id } = req.params;
 
   const project = projects.find(p => p.id === id);
 
   if (!project) {
-    return res.status(400).json({ error: "Id does not exist" });
+    return res.status(400).json({ error: "Project not found" });
   }
 
   return next();
 }
 
+/**
+ * Middleware that blocks a creation of two projects with the same ID
+ */
 function projectIdExists2(req, res, next) {
   const { id } = req.body;
 
@@ -37,24 +46,30 @@ function projectIdExists2(req, res, next) {
     return next();
   }
 
-  return res.status(400).json({ error: "Id already exist" });
+  return res.status(400).json({ error: "Id already exists" });
 }
 
+app.use(logRequests);
+
+/**
+ * Projects
+ */
 app.get("/projects", (req, res) => {
   return res.json(projects);
 });
 
 app.post("/projects", projectIdExists2, (req, res) => {
-  const { id } = req.body;
-  const { title } = req.body;
+  const { id, title } = req.body;
 
-  projects.push({
-    id: id,
-    title: title,
+  const project = {
+    id,
+    title,
     tasks: []
-  });
+  };
 
-  return res.json(projects);
+  projects.push(project);
+
+  return res.json(project);
 });
 
 app.put("/projects/:id", projectIdExists, (req, res) => {
@@ -71,13 +86,16 @@ app.put("/projects/:id", projectIdExists, (req, res) => {
 app.delete("/projects/:id", projectIdExists, (req, res) => {
   const { id } = req.params;
 
-  const project = projects.findIndex(p => p.id === id);
+  const projectIndex = projects.findIndex(p => p.id === id);
 
-  projects.splice(project, 1);
+  projects.splice(projectIndex, 1);
 
   return res.send();
 });
 
+/**
+ * Tasks
+ */
 app.post("/projects/:id/tasks", projectIdExists, (req, res) => {
   const { id } = req.params;
   const { title } = req.body;
@@ -86,7 +104,7 @@ app.post("/projects/:id/tasks", projectIdExists, (req, res) => {
 
   project.tasks.push(title);
 
-  return res.json(projects);
+  return res.json(project);
 });
 
 app.listen(3333);
